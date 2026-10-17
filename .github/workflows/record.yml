@@ -8,8 +8,10 @@ name: emulator-record
 #      UI and record the screen.
 #   4. Upload ONLY the screen recording as artifact (no APK, no source).
 #
-# v3 hardening: timeout 60 (health polls add time), ram 4096M, 4 emulated
-# cores, artifact includes state-pre.png (screen state evidence).
+# v4 hardening: AOT compile removed (it starved SystemUI -> system-wide ANR
+# wedge, run #3), -cores 2 (host vCPU headroom for swiftshader), dumpsys-based
+# ANR dismissal with calibrated Wait tap, SystemUI restart recovery, logcat +
+# ANR traces uploaded for post-mortem.
 
 on:
   workflow_dispatch: {}
@@ -56,7 +58,9 @@ jobs:
           target: google_apis
           profile: pixel_5
           ram-size: '4096M'
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
+          # -cores 2 (was 4): 4 guest cores on a 4-vCPU host left no CPU for
+          # qemu/swiftshader host threads and contributed to the SystemUI wedge.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 2
           disable-animations: true
           # Single entry point: all interactions (incl. loops) live in
           # ci/interact.sh - the runner executes the YAML script line by line.
@@ -72,3 +76,12 @@ jobs:
             viewer-open.png
             state-pre.png
           if-no-files-found: error
+
+      - name: Upload diagnostics (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rescata-diagnostics
+          path: |
+            logcat-tail.txt
+            anr-traces/**
+          if-no-files-found: ignore
