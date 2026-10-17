@@ -1,12 +1,15 @@
 name: emulator-record
 
-# Minimal public CI harness. It contains NO application source code.
-# Flow:
+# Minimal public CI harness (repo: rescata-ci). It contains NO application
+# source code. Flow:
 #   1. Clone the private app repo at runtime (secret CI_APP_TOKEN).
 #   2. Build the debug APK on the ephemeral runner.
 #   3. Boot an API 34 emulator (KVM on GitHub runners), install, drive the
 #      UI and record the screen.
 #   4. Upload ONLY the screen recording as artifact (no APK, no source).
+#
+# v3 hardening: timeout 60 (health polls add time), ram 4096M, 4 emulated
+# cores, artifact includes state-pre.png (screen state evidence).
 
 on:
   workflow_dispatch: {}
@@ -16,7 +19,7 @@ on:
 jobs:
   record:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - name: Checkout harness
@@ -52,8 +55,8 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_5
-          ram-size: '3072M'
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          ram-size: '4096M'
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
           disable-animations: true
           # Single entry point: all interactions (incl. loops) live in
           # ci/interact.sh - the runner executes the YAML script line by line.
@@ -67,4 +70,5 @@ jobs:
           path: |
             rescata-run.mp4
             viewer-open.png
+            state-pre.png
           if-no-files-found: error
