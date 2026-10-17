@@ -58,9 +58,12 @@ jobs:
           target: google_apis
           profile: pixel_5
           ram-size: '4096M'
-          # -cores 2 (was 4): 4 guest cores on a 4-vCPU host left no CPU for
-          # qemu/swiftshader host threads and contributed to the SystemUI wedge.
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 2
+          # -cores 4 (run #1/#3 proven boot config; -cores 2 in v4 made boot
+          # exceed the action's boot timeout - run #4 failure). The SystemUI
+          # wedge came from the AOT compile (removed in v4), NOT from cores.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -cores 4
+          # API 34 + swiftshader cold boots take 13+ min; give it 25 min.
+          emulator-boot-timeout: 1500
           disable-animations: true
           # Single entry point: all interactions (incl. loops) live in
           # ci/interact.sh - the runner executes the YAML script line by line.
