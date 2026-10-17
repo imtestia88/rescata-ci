@@ -21,10 +21,22 @@ adb shell pm grant com.rescata.app android.permission.READ_MEDIA_VISUAL_USER_SEL
 adb shell pm grant com.rescata.app android.permission.POST_NOTIFICATIONS || true
 adb shell appops set --uid com.rescata.app MANAGE_EXTERNAL_STORAGE allow || true
 
+# Suppress ANR/crash system dialogs (software-rendered emulator is slow on
+# cold start; the dialog would contaminate the recording).
+adb shell settings put global send_action_app_error 0 || true
+
+# Emergency "Wait" tap if an ANR dialog still appears (centered dialog,
+# Wait row ~y=1270 on 1080x2340).
+wait_anr() {
+  adb shell input tap 540 1270 || true
+}
+
 # ---- 2. First launch (creates Saved dir; SAF prompt may appear) ----------
 adb shell am start -W -n com.rescata.app/.MainActivity
-sleep 6
-adb shell input keyevent 4
+sleep 14
+wait_anr                       # dismiss any ANR with "Wait"
+sleep 4
+adb shell input keyevent 4     # dismiss SAF folder picker if it appeared
 sleep 2
 adb shell input keyevent 4
 sleep 2
@@ -44,7 +56,9 @@ sleep 2
 
 # ---- 4. Relaunch (Vault now has items) and record ------------------------
 adb shell am start -W -n com.rescata.app/.MainActivity
-sleep 12
+sleep 16
+wait_anr
+sleep 4
 
 adb shell "screenrecord --time-limit 100 /data/local/tmp/rescata-run.mp4" &
 REC_PID=$!
